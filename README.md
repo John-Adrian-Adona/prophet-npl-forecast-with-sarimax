@@ -60,10 +60,10 @@ For detailed variable descriptions, please see this project's [Data Dictionary](
 1.	Due to the limited size of the monthly dataset and the large number of potential macroeconomic indicators, a limit is imposed on the number of regressors or exogenous variables. To ensure non-arbitrary selection of these indicators, we use a Multiple Linear Regression (MLR) framework in combination with the Best Subset Selection approach.
 2.	Best Subset Selection evaluates all possible combinations of regressors, within the imposed limit, and selects the optimal model based on statistical criteria and other considerations.
 3.	After performing Best Subset Selection, the following criteria were applied to determine the final list of candidate models:
-  a.	**Multicollinearity** – Models with regressors exhibiting high multicollinearity (VIF > 5) or excessive correlation between macroeconomic indicators were avoided to ensure stable estimates.
-  b.	**Homoscedasticity** – Models with non-constant variance in error terms were excluded, verified through the Breusch-Pagan test (p-value > 0.05)
-  c.	**Cointegration Test** – Models with non-stationary error terms, indicating unstable long-term relationships between regressors and the target variable (NPL ratios), were rejected, verified through the Engle-Granger test (p-value > 0.05)
-  d.	**Non-Duplication** – Models containing redundant regressors (e.g., the original regressor and its lag variant) were excluded to avoid information duplication
+   1.	**Multicollinearity** – Models with regressors exhibiting high multicollinearity (VIF > 5) or excessive correlation between macroeconomic indicators were avoided to ensure stable estimates.
+   2.	**Homoscedasticity** – Models with non-constant variance in error terms were excluded, verified through the Breusch-Pagan test (p-value > 0.05)
+   3.	**Cointegration Test** – Models with non-stationary error terms, indicating unstable long-term relationships between regressors and the target variable (NPL ratios), were rejected, verified through the Engle-Granger test (p-value > 0.05)
+   4.	**Non-Duplication** – Models containing redundant regressors (e.g., the original regressor and its lag variant) were excluded to avoid information duplication
 4.	Regression models that handle time series information also must account for autocorrelation or serial correlations within the regressors and target variable, depicting correlation with their past values. To account for these autocorrelations, migrating the chosen model to SARIMAX is necessary
 5.	Time series regression models must account for autocorrelation or serial correlation, where regressors and the target variable correlate with past values. To address these autocorrelations, the selected model is transitioned to SARIMAX, which explicitly handles these dependencies.
 
