@@ -16,7 +16,7 @@ library(prophet)
 library(astsa)
 
 # ==== 3. PREPARE WORKING DIRECTORY ====
-overlay_loc <- "C:/Users/jaeadona/Documents/Adrian Adona/NewFile/ECL/Packing Up/Personal Project/BSP NPL Ratio Prediction w Macroeconomic variables"
+overlay_loc <- "D:/John Adrian Files/Files/Projects/Final Compilation - NPL Ratio Forecasting Project"
 setwd(overlay_loc)
 
 # ==== 4. IMPORT INPUT FILES ====
@@ -83,7 +83,7 @@ custom_theme <- theme(
   
   
   panel.background = element_rect(fill = "#FAF3E0", color = NA),
-  panel.border = element_rect(size = 2),
+  panel.border = element_rect(linewidth = 2),
   plot.background = element_rect(fill = "white"),
   plot.title = element_text(size = 24, face = "bold", 
                             hjust = 0.5, margin = margin(b = 10)),
@@ -279,82 +279,47 @@ plot(ts_var_5)
 pacf(ts_var_5)
 acf(ts_var_5)
 
-# ==== PROPHET MODEL ATTEMPT ====
-
-# FOURIER TERMS
-fourier_term <- fourier(ts(log(ts_var_5)[1:129], frequency = 60), 1)
+# -- PROPHET MODEL ATTEMPT --
 
 # CREATE DATAFRAME FOR PROPHET
 df_for_prophet <- data.frame(
   ds = mdy(variables_final$Date)[1:129],
-  y = (ts_var_5)[1:129],
-  floor = .035,
-  cap = .06
-) %>%
-  mutate(outlier = if_else(ds >= as.Date("2020-03-31") & 
-                             ds <= as.Date("2023-05-31"), 1, 0),
-         fourier_1 = fourier_term[, 1],
-         fourier_2 = fourier_term[, 2]); head(df_for_prophet)
-
-holiday <- data.frame(
-  ds = seq.Date(from = as.Date("2020-03-31"), to = as.Date("2023-05-31"),
-                "months"),
-  holiday = rep("Covid", 39)
-)
+  y = (ts_var_5)[1:129]
+) 
 
 # INITIATE PROPHET MODEL
 {
-  model <- prophet(changepoint.prior.scale = .1,
-                   n.changepoints = 15,
+  model <- prophet(changepoint.prior.scale = .15,
+                   n.changepoints = 10,
                    seasonality.prior.scale = 5,
-                   yearly.seasonality = FALSE,
-#                   holidays = holiday
-#                   changepoints = as.Date(c(
-#                     "2018-04-30", "2019-04-30", "2020-06-30",
-#                     "2020-08-31", "2021-12-31", "2022-04-30"
-#                   ))
-)
+                   yearly.seasonality = FALSE)
   model <- add_seasonality(model, name = 'yearly',
-                         period = 12, fourier.order = 2)
-  model <- add_regressor(model, "outlier")
-#  model <- add_regressor(model, "fourier_1")
-#  model <- add_regressor(model, "fourier_2")
+                         period = 60, fourier.order = 2)
   model <- fit.prophet(model, df_for_prophet)
 
   future <- make_future_dataframe(model,
                                 periods = 27, freq = "month")
-  future$outlier <- c(df_for_prophet$outlier, rep(0, 27))
-#  future$fourier_1 <- c(fourier_term[, 1], fourier_term[8:34, 1])
-#  future$fourier_2 <- c(fourier_term[, 2], fourier_term[8:34, 2])
-  future$floor <- .035
-  future$cap <- .06
+  
   forecast <- predict(model, future)
   plot(model, forecast)
 }
 
+# CHECK POST-MODEL CROSS VALIDATION (VIA ROLLING WINDOW)
 validate_model <- cross_validation(model, 
                                    initial = 2555,
                                    period = 180, 
                                    horizon = 730, units = "days")
+
+# CHECK PERFORMANCE METRICS 
 performance_metrics(validate_model)
+
+# PLOT CROSS VALIDATION RESULTS 
+plot_cross_validation_metric(validate_model, metric = 'mae')
 plot_cross_validation_metric(validate_model, metric = 'rmse')
+plot_cross_validation_metric(validate_model, metric = 'mape')
 
+# PLOT PROPHET COMPONENTS
 prophet_plot_components(model, forecast)
-
-astsa::tsplot(ts_var_5)
-astsa::tsplot(exp(forecast$yhat_lower))
-astsa::tsplot(exp(forecast$yhat_upper))
-
-# STL + ETS APPROACH
-
-stl_var5 <- stl(ts(ts_var_5[1:108], frequency = 12), s.window = "periodic")
-plot(stl_var5)
-
-forecast_var_5 <- stlf(ts(ts_var_5[1:108], frequency = 12), etsmodel = "NAN", h = 48, damped = TRUE, lambda = 0)
-forecast_seasonal_5 <- forecast(stl_var5$time.series[, "seasonal"], h = 48)
-
-plot(forecast_var_5)
-plot(forecast_seasonal_5)
 
 
 # ==== 8. SAVE FUTURE FORECASTS AS DATA FRAME ====
@@ -366,6 +331,8 @@ future_values <- data.frame(V1 = var_1_result$var_1[121:144],
 
 
 # ==== 9. TEST OUT SARIMAX MODEL ====
+
+# Check NPL Ratio data again
 ts_npl <- ts(train_data$NPL.Ratio, 
              frequency = 12)
 plot(ts_npl)
@@ -374,29 +341,31 @@ adf.test(ts_npl)
 kpss.test(ts_npl)
 
 # ---- Move to SARIMAX model using Arima() ----
+
+# Check PACF and ACF plots
 pacf(ts_npl)
 acf(ts_npl)
 
+# Initiate SARIMAX Model with chosen terms (via trial and error)
 sarimax <- Arima(ts_npl, order = c(1, 0, 3), seasonal = c(2, 1, 2), include.mean = FALSE,
                  biasadj = TRUE, xreg = as.matrix(train_data[variables[-1]]), method = "ML")
 forecast_sarimax <- forecast(sarimax, h = 48,
                              xreg = as.matrix(rbind(test_data[variables[-1]], future_values)))
 
-
 # Check forecasts and accuracy results
 plot(forecast_sarimax)
+tsplot(c(ts_npl, test_data$NPL.Ratio.ln.diff_3))
+
 accuracy(sarimax)
+
 tsplot(fitted(sarimax))
 tsplot(ts_npl)
-
-tsplot(c(ts_npl, test_data$NPL.Ratio.ln.diff_3))
 
 # Check residuals 
 pacf(residuals(sarimax))
 acf(residuals(sarimax))
 
-#pacf(diff(residuals(sarimax), 12))
-#acf(diff(residuals(sarimax), 12))
+# Check Ljung-Box test
 checkresiduals(sarimax)
 
 
@@ -564,8 +533,6 @@ accuracy(ts(visual$Final_forecasts[visual$Category %in% c("Test", "Forecasts")])
 # ---- Overall Result Validation ----
 accuracy(ts(visual$Final_forecasts[visual$Category %in% c("Train", "Test", "Forecasts")]),
          ts(c(ts_var_5[13:132], forecast$yhat[133:156])))
-
-
 
 
 # ==== SAVE PROGRESS ====
