@@ -19,7 +19,7 @@ To address these issues, this project employs Multiple Linear Regression (MLR) w
 
 ### INSTALLATION
 
-##### Prerequisites
+##### *Prerequisites*
 
 To run this projecet, ensure you have the following installed before proceeding with this project:
 
@@ -27,7 +27,7 @@ To run this projecet, ensure you have the following installed before proceeding 
 * RStudio
 * Git
 
-##### Required Packages
+##### *Required Packages*
 
 Install the necessary packages for the project using the line of R script below:
 
@@ -39,7 +39,7 @@ install.packages(c(
 ))
 ```
 
-##### Running the Project
+##### *Running the Project*
 
 1. Clone or download this repository
 2. Run the scripts in the following order:
@@ -47,13 +47,13 @@ install.packages(c(
 * `02 ARIMA Model - Data Processing.R`
 * `03 SARIMAX + PROPHET Model Validation - MODEL 9254.R`
 
-##### NOTE: 
+##### *NOTE:*
 - The R script file, `01.5 Multiple Linear Regression - Checking.R`, is unnecessary to run the whole project. It serves as proof of experimentation for the data transformations and stationarity.
 - This project does not include an `.Rproj` file. You can run the R scripts manually or create one by opening the folder in RStudio and selecting `New Project > Existing Directory`.
 
 ### DATA COLLECTION
 
-For detailed variable descriptions, please see this project's [Data Dictionary]().
+For detailed variable descriptions, please see this project's [Data Dictionary](Data%20Dictionary%20-%20SARIMAX%20Adjustment%20Model.pdf).
 
 ### MODEL SELECTION AND TRAINING
 
@@ -69,10 +69,60 @@ For detailed variable descriptions, please see this project's [Data Dictionary](
 
 ### FORECASTING AND POST-PROCESSING
 
-1.	This project will forecast NPL ratios and the other macroeconomic indicators for the next 24 months after December 2024, giving the monthly predictions for the years 2025 and 2026.
+1.	This project will forecast NPL ratios and the other macroeconomic indicators for the next 24 months after December 2024, giving the monthly predictions for 2025 and 2026.
 2.	As endorsed in the project title, the future forecasts of the historical NPL ratios are done using Prophet with an additional cosine Fourier term to help improve the baseline forecasts.
 3.	On the other hand, the future forecasts of macroeconomic indicators from the chosen model use ETS models on their original scaling before consolidating their future forecasts with the historical data and applying the same data transformation done in the MLR-Best Subset Selection framework. 
 4.	The SARIMAX outputs of the chosen model will be reverted back to its original scaling with the help of Prophet’s baseline forecasts of future NPL ratios, using them to revert the differencing and log transformations done prior the model selection.
 
 ### RESULTS AND INSIGHTS
 
+##### *Selected Macroeconomic Adjustment Model*
+
+After testing combinations of macroeconomic indicators from the candidate models produced by the MLR and Best Subset Selection approach, and evaluating statistical criteria and intuitiveness, the final list of models is retrieved. There are other models to choose from, but in this case, I have selected the model with the following macroeconomic indicators:
+
+* Consumer Price Index - All Items
+* CCI / Consumer Confidence Index
+* GDP / Gross Domestic Product (2-months lag)
+* Gross Capital Information (5-months lag)
+
+![MLR Summary Results of the Macro-Adjustment Model](SCREENSHOTS/00-Chosen-MLR%20Model-(9254).png)
+
+These macroeconomic indicators cover consumer prices, sentiment, economic activity, and investments—capturing how shifts in the broader economy can influence NPL ratios, both in the short and longer term..
+
+##### *NPL Ratio Forecast Results: SARIMAX (Final Adjusted Output)*
+
+Using the macroeconomic indicators from the chosen MLR model, the SARIMAX model was developed. Since the model was trained on transformed data, the separate baseline Prophet forecasts were used to revert the result to its original scale. This is to improve the interpretability of the SARIMAX forecasts.
+
+![NPL Forecasts for the Next 24 Months](SCREENSHOTS/04-Prophet-Baseline-Forecasts-(Next-24-Months).png)
+
+Based on the reverted results, the NPL ratios for 2025 and 2026 are expected to remain at historically low levels, continuing the trend in the post-COVID era. However, small upward movements are projected in the early half of both years, suggesting a potential target for caution from short-term economic fluctuations.
+
+##### *Forecast Comparison: SARIMAX-Adjusted VS Prophet Baseline*
+
+In the graph below, you can see how the SARIMAX model aligns well with the historical trend. Compared to the baseline Prophet forecasts, the SARIMAX adjustments bring a slight upward shift to the forecast. In addition, the SARIMAX-adjusted predictions follow a similar structure to both the baseline Prophet forecasts and some of the recent historical data - indicating a good fit with past trends while incorporating macroeconomic context.
+
+![Baseline VS Macroeconomic Adjustments](SCREENSHOTS/07-Fitted-(SARIMAX)-VS-Actual-(Prophet)-Plot.png)
+
+##### *Future Forecast Uncertainty (Confidence Intervals)*
+
+The confidence intervals display the range of uncertainty in the predictions. Following the SARIMAX adjustments, the forecast confidence intervals had widened slightly, which is to be expected, as incorporating macroeconomic indicators introduces additional variability, suggesting a more cautious risk outlook.
+
+![Confidence Interval Forecasts Comparison](SCREENSHOTS/08-Prophet-Baseline-Forecasts-VS-SARIMAX-Macroeconomic-Adjustments.png)
+
+##### *Model Performance - Train vs Test Set*
+
+Based on the model performance across the training and testing sets, the SARIMAX adjustment displayed strong results in both MAE and RMSE, performing even better on the test set than on the training set. Although there was a slight increase in MAPE, the test set performance remains within an acceptable threshold (approximately 5%).
+
+|             | ME       | RMSE   | MAE    | MPE   | MAPE | ACF1 |
+|:-----------:|:--------:|:------:|:------:|:-----:|:----:|:----:|
+|Train Data   |-0.00026  |0.00322 |0.00186 |-0.29% |2.81% |-0.05 |
+|Test Data    |-0.00037  |0.00262 |0.00178 |-1.44% |5.15% |0.296 |
+
+One minor concernis the ACF1 value, which suggests mild autocorrelation in the residuals.
+This may be attributed to how the differenced outputs of the SARIMAX model are reverted back to the original scaling using the Prophet forecasts, introducing some level of dependency on the Prophet model.
+
+### CLOSING NOTES
+
+This project combines traditional statistical modeling in SARIMAX and Multiple Linear Regression with the modern forecasting of Prophet to explore how macroeconomic factors can be incorporated systematically to the baseline NPL ratio predictions.
+
+If you have any thoughts on this, feek free to reach out or [connect with me on Linkedin](https://www.linkedin.com/in/john-adrian-adona/)!
