@@ -358,6 +358,7 @@ tsplot(c(ts_npl, test_data$NPL.Ratio.ln.diff_3))
 
 accuracy(sarimax)
 
+# Compare Fitted VS Actual Plots
 tsplot(fitted(sarimax))
 tsplot(ts_npl)
 
@@ -520,7 +521,23 @@ ggplot(ci_comparision, aes(x = date, y = values,
   custom_theme
 
 
-# ==== CHECK MODEL METRICS ====
+# ==== 11. CHECK FORECAST VS. ACTUAL SCATTER PLOT ====
+
+# Prepare data frame for scatter plot
+scatter_plot_df <- data.frame(
+  Actual = c(ts_var_5[109:132], forecast$yhat[133:156]),
+  Forecast = visual$Final_forecasts[visual$Category %in% c("Test", "Forecasts")]
+  )
+
+# Execute the scatter plot
+ggplot(scatter_plot_df, aes(x = Actual, y = Forecast)) +
+  geom_point(color = "darkgreen") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Actual vs Forecast Scatter Plot") +
+  theme_bw() + 
+  custom_theme
+
+# ==== 12. CHECK MODEL METRICS ====
 
 # ---- Train Results Validation ----
 accuracy(ts(visual$Final_forecasts[visual$Category == "Train"]),
@@ -530,11 +547,7 @@ accuracy(ts(visual$Final_forecasts[visual$Category == "Train"]),
 accuracy(ts(visual$Final_forecasts[visual$Category %in% c("Test", "Forecasts")]),
          ts(c(ts_var_5[109:132], forecast$yhat[133:156])))
 
-# ---- Overall Result Validation ----
-accuracy(ts(visual$Final_forecasts[visual$Category %in% c("Train", "Test", "Forecasts")]),
-         ts(c(ts_var_5[13:132], forecast$yhat[133:156])))
 
-
-# ==== SAVE PROGRESS ====
+# ==== 13. SAVE PROGRESS ====
 save.image("NPL Prediction - Model Validation.RData")
 load("NPL Prediction - Model Validation.RData")
